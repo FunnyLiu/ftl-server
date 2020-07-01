@@ -1,5 +1,109 @@
 # ftl-server
 
+
+# 源码分析
+
+## 文件结构
+
+``` bash
+├── app.js
+├── bin
+|  └── index.js - 命令行入口
+├── https
+|  ├── certificate.pem
+|  └── privatekey.pem
+├── lib
+|  ├── argv.js
+|  ├── config.js
+|  ├── ftl
+|  |  ├── TemplateRun.js
+|  |  ├── ftl.js
+|  |  ├── index.js
+|  |  └── jar
+|  |     ├── FMtoll.jar
+|  |     ├── freemarker.jar
+|  |     ├── js.jar
+|  |     └── json-simple-1.1.1.jar
+|  ├── injectScript.js
+|  ├── ipList.js
+|  ├── list.js
+|  ├── live
+|  |  ├── index.js
+|  |  └── live-client.js
+|  ├── logger.js
+|  ├── mock
+|  |  ├── dispather.js
+|  |  ├── index.js
+|  |  ├── json.js
+|  |  └── jsonp.js
+|  ├── proxy
+|  |  ├── defaultProxy.js
+|  |  ├── index.js
+|  |  └── proxy.js
+|  ├── static.js
+|  └── weinre.js
+├── package.json
+└── views
+   ├── error.jade
+   ├── index.jade
+   └── layout.jade
+
+directory: 18 file: 62
+
+ignored: directory (1)
+
+```
+
+## 外部模块依赖
+
+请在： http://npm.broofa.com?q=ftl-server 查看
+
+## 内部模块依赖
+
+![img](./inner.svg)
+  
+
+## 知识点
+
+### 底层如何让node可以读取ftl的呢？
+
+子进程配合java命令执行jar包之FMtoll.jar来完成。
+
+``` js
+var spawn = require('child_process').spawn;
+var path = require("path");
+var assign = require('object-assign');
+// 读取一个jar包，读取ftl的关键jar包
+var jarFile = path.join(__dirname, "/jar/FMtoll.jar");
+
+//	dataModel - data model
+//	settings - include `encoding` and `viewFolder`
+//	fileName - template file name
+exports.processTemplate = function(path, dataModel, settings, callback) {
+	var dataModel = JSON.stringify(dataModel);
+	var resultData = "";
+	var cmd;
+	var stdout;
+	var stderr;
+
+	settings = assign({
+		encoding: 'utf-8',
+		viewFolder: process.cwd()
+	}, settings);
+
+	settings = JSON.stringify(settings);
+	// 开子进程通过java命令来完成对ftl的渲染
+	cmd = spawn('java', ["-jar", jarFile, settings, path.substring(1), dataModel ]);
+	stdout = cmd.stdout;
+	stderr = cmd.stderr;
+
+	callback(stdout, stderr);
+	stderr.setEncoding('utf-8');
+};
+
+```
+
+
 [![npm](https://img.shields.io/npm/v/ftl-server.svg)](https://www.npmjs.com/package/ftl-server)
 [![Build Status](https://travis-ci.org/szmtcjm/ftl-server.svg?branch=master)](https://travis-ci.org/szmtcjm/ftl-server)
 
